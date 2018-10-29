@@ -17,7 +17,8 @@ import {
   getFieldValueType,
   extractTypeMapFromTypeDefs,
   addDirectiveDeclarations,
-  printTypeMap
+  printTypeMap,
+  removeReturn
 } from './utils';
 import { buildCypherSelection } from './selections';
 import {
@@ -130,9 +131,11 @@ export function cypherQuery(
       return x.name.value === 'statement';
     });
 
-    query = `WITH apoc.cypher.runFirstColumn("${
-      cypherQueryArg.value.value
-    }", ${argString}, True) AS x UNWIND x AS ${variableName}
+    let directiveCypherQuery = cypherQueryArg.value.value;
+
+    directiveCypherQuery = removeReturn(directiveCypherQuery);
+
+    query = `${directiveCypherQuery}
     RETURN ${variableName} {${subQuery}} AS ${variableName}${orderByValue} ${outerSkipLimit}`;
   } else {
     // No @cypher directive on QueryType
@@ -151,7 +154,6 @@ export function cypherQuery(
     query =
       `MATCH (${variableName}:${typeName} ${argString}) ${predicate}` +
       `RETURN ${variableName} {${subQuery}} AS ${variableName}${orderByValue} ${outerSkipLimit}`;
-
   }
 
   return [query, { ...nonNullParams, ...subParams }];
@@ -247,7 +249,7 @@ export function cypherMutation(
       resolveInfo.fieldName
     ].astNode.arguments;
 
-    const firstIdArg = args.find(e => getFieldValueType(e) === "ID");
+    const firstIdArg = args.find(e => getFieldValueType(e) === 'ID');
     if (firstIdArg) {
       const firstIdArgFieldName = firstIdArg.name.value;
       if (params.params[firstIdArgFieldName] === undefined) {
@@ -332,7 +334,7 @@ export function cypherMutation(
       paramIndex: 1,
       rootVariableNames: {
         from: `${fromVar}`,
-        to: `${toVar}`,
+        to: `${toVar}`
       },
       variableName: schemaType.name === fromType ? `${toVar}` : `${fromVar}`
     });
@@ -460,7 +462,7 @@ RETURN ${variableName}`;
         from: `_${fromVar}`,
         to: `_${toVar}`
       },
-      variableName: schemaType.name === fromType ? `_${toVar}` : `_${fromVar}`,
+      variableName: schemaType.name === fromType ? `_${toVar}` : `_${fromVar}`
     });
     params = { ...params, ...subParams };
 
@@ -527,9 +529,9 @@ export const makeAugmentedSchema = ({
   });
 };
 
-export const augmentTypeDefs = (typeDefs) => {
+export const augmentTypeDefs = typeDefs => {
   const typeMap = extractTypeMapFromTypeDefs(typeDefs);
   // overwrites any provided declarations of system directives
   const augmented = addDirectiveDeclarations(typeMap);
   return printTypeMap(augmented);
-}
+};
