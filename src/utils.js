@@ -716,12 +716,14 @@ export const removeMatch = query => {
   return query.replace('MATCH', '');
 };
 
-var returnRegex = /return (.*)/gi;
+// const removeRegex = /return (.*)/gi
+const returnRegex = /(return\s(\w+)(.*))/gi;
 export const removeReturn = query => {
   return query.replace(returnRegex, '');
 };
 
 export const getReturnVal = query => {
   const matches = returnRegex.exec(query);
-  if (matches.length) return matches[1];
+  if (matches && matches.length)
+    return { retVal: matches[2], subSelection: matches[3] };
 };

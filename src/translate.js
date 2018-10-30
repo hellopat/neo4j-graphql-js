@@ -27,7 +27,27 @@ export const customCypherField = ({
   }
 
   // Get value for RETURN to be used as primary object for projection
-  const retVal = getReturnVal(customCypher);
+  // and any additional projection values
+  let { retVal, subSelection: addlSubSelection } = getReturnVal(customCypher);
+
+  // If there are any extra projection params, add them to subSelection
+  if (addlSubSelection.length > 0) {
+    let subSelectionArr = subSelection[0].split(' ');
+    let addlSubSelectionArr = addlSubSelection.split(' ');
+
+    addlSubSelectionArr = addlSubSelectionArr.filter(
+      x => x !== '{' && x !== '}'
+    );
+
+    // Need a way to remove clashing scalar values if providing a custom projection
+
+    const args = [1, 0].concat(addlSubSelectionArr, [',']);
+    Array.prototype.splice.apply(subSelectionArr, args);
+
+    subSelection = subSelectionArr.join(' ');
+  } else {
+    subSelection = subSelection[0];
+  }
 
   // Remove MATCH from subquery
   customCypher = removeMatch(customCypher);
@@ -39,7 +59,7 @@ export const customCypherField = ({
   return {
     initial: `${initial}${fieldName}: ${
       fieldIsList ? '' : 'head('
-    }[ ${customCypher} | ${retVal} {${subSelection[0]}}]${
+    }[ ${customCypher} | ${retVal} {${subSelection}}]${
       fieldIsList ? '' : ')'
     }${skipLimit} ${commaIfTail}`,
     ...tailParams
